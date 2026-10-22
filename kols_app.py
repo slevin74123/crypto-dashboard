@@ -262,7 +262,7 @@ with tab_token:
 
                 # header
                 dex_url = pair.get("url", "")
-                st.markdown(f"""
+                st.html(f"""
                 <div style="display:flex;align-items:center;gap:1rem;margin-bottom:1rem;">
                   <div>
                     <div style="font-size:1.4rem;font-weight:700;color:#e2e8f0">
@@ -276,7 +276,7 @@ with tab_token:
                     </div>
                   </div>
                 </div>
-                """, unsafe_allow_html=True)
+                """)
 
                 # KPI grid
                 delta_color = "#22c55e" if (price_change or 0) >= 0 else "#ef4444"
@@ -301,7 +301,7 @@ with tab_token:
                 sells = txns.get("sells", "—")
                 total_txns = (buys + sells) if isinstance(buys, int) and isinstance(sells, int) else "—"
 
-                st.markdown(f"""
+                st.html(f"""
                 <div style="display:flex;gap:0.75rem;flex-wrap:wrap;margin-bottom:1rem">
                   {kpi("Preț", price_fmt,
                        f'<span style="color:{delta_color}">{delta_sign} {abs(price_change or 0):.2f}%</span> 24h')}
@@ -311,7 +311,7 @@ with tab_token:
                   {kpi("Tranzacții 24h", f"{total_txns:,}" if isinstance(total_txns, int) else total_txns,
                        f"↑ {buys:,} cumpărări · ↓ {sells:,} vânzări" if isinstance(buys, int) else None)}
                 </div>
-                """, unsafe_allow_html=True)
+                """)
 
                 if dex_url:
                     st.markdown(f"[Vezi pe DexScreener →]({dex_url})")
