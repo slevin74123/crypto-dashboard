@@ -10,7 +10,7 @@ API_KEY = os.getenv("SORSA_API_KEY", "")
 BASE    = "https://api.sorsa.io/v3"
 CSV_PATH = "kols.csv"
 
-st.set_page_config(page_title="KOL Trending", page_icon="📡", layout="wide")
+st.set_page_config(page_title="KOL Dashboard", page_icon="📡", layout="wide")
 
 st.markdown("""
 <style>
@@ -47,7 +47,42 @@ html, body,
 """, unsafe_allow_html=True)
 
 
-# ── helpers ───────────────────────────────────────────────────────────────────
+# ── dexscreener helper ───────────────────────────────────────────────────────
+
+def fetch_token(address: str) -> tuple[dict | None, str | None]:
+    try:
+        r = requests.get(
+            f"https://api.dexscreener.com/latest/dex/tokens/{address.strip()}",
+            timeout=10,
+        )
+        if not r.ok:
+            return None, f"HTTP {r.status_code}"
+        data = r.json()
+        pairs = data.get("pairs") or []
+        if not pairs:
+            return None, "Adresa nu a fost găsită sau nu are perechi active pe DEX."
+        # ia cea mai lichidă pereche
+        pair = sorted(pairs, key=lambda p: float(p.get("liquidity", {}).get("usd", 0) or 0), reverse=True)[0]
+        return pair, None
+    except Exception as e:
+        return None, str(e)
+
+
+def fmt_num(val, prefix="$", decimals=2) -> str:
+    try:
+        v = float(val)
+    except (TypeError, ValueError):
+        return "—"
+    if v >= 1_000_000_000:
+        return f"{prefix}{v/1_000_000_000:.{decimals}f}B"
+    if v >= 1_000_000:
+        return f"{prefix}{v/1_000_000:.{decimals}f}M"
+    if v >= 1_000:
+        return f"{prefix}{v/1_000:.{decimals}f}K"
+    return f"{prefix}{v:.{decimals}f}"
+
+
+# ── sorsa helpers ─────────────────────────────────────────────────────────────
 
 def sg(endpoint: str, username: str) -> dict | list:
     try:
@@ -133,69 +168,150 @@ def run_analysis(kols: list[str]) -> pd.DataFrame:
 
 # ── layout ────────────────────────────────────────────────────────────────────
 
-col_title, col_refresh = st.columns([7, 1])
-with col_title:
-    st.markdown("## 📡 KOL Trending")
-with col_refresh:
-    st.write("")
-    refresh = st.button("🔄 Refresh", use_container_width=True)
+st.markdown("## 📡 KOL Dashboard")
+tab_trending, tab_token = st.tabs(["📈  Trending", "🔎  Token Analysis"])
 
-# timestamp
-ts_placeholder = st.empty()
-if "last_refresh" in st.session_state:
-    ts_placeholder.caption(f"Ultimul refresh: {st.session_state.last_refresh}")
 
-st.divider()
+# ════════════════════════════════════════════════════════════════
+#  TAB 1 — TRENDING
+# ════════════════════════════════════════════════════════════════
+with tab_trending:
+    col_title, col_refresh = st.columns([8, 1])
+    with col_title:
+        ts_placeholder = st.empty()
+        if "last_refresh" in st.session_state:
+            ts_placeholder.caption(f"Ultimul refresh: {st.session_state.last_refresh}")
+    with col_refresh:
+        refresh = st.button("🔄 Refresh", use_container_width=True)
 
-kols = load_kols()
-if not kols:
-    st.warning(f"Niciun username găsit în `{CSV_PATH}`.")
-    st.stop()
+    kols = load_kols()
+    if not kols:
+        st.warning(f"Niciun username găsit în `{CSV_PATH}`.")
+    elif not API_KEY:
+        st.error("SORSA_API_KEY lipsă din fișierul .env")
+    else:
+        if refresh or "result_df" not in st.session_state:
+            with st.spinner("Se rulează analiza…"):
+                st.session_state.result_df = run_analysis(kols)
+            st.session_state.last_refresh = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            ts_placeholder.caption(f"Ultimul refresh: {st.session_state.last_refresh}")
 
-if not API_KEY:
-    st.error("SORSA_API_KEY lipsă din fișierul .env")
-    st.stop()
+        df: pd.DataFrame = st.session_state.result_df
 
-# auto-run la prima încărcare sau la refresh
-if refresh or "result_df" not in st.session_state:
-    with st.spinner("Se rulează analiza…"):
-        st.session_state.result_df = run_analysis(kols)
-    st.session_state.last_refresh = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    ts_placeholder.caption(f"Ultimul refresh: {st.session_state.last_refresh}")
+        if df.empty:
+            st.info("Niciun proiect detectat. API key-ul poate fi inactiv.")
+            with st.expander("Debug: KOLs încărcați"):
+                st.write(kols)
+        else:
+            display = df[[
+                "_avatar", "Profile", "Score", "Score Change 7d",
+                "Total Followers", "Influencer Followers", "VC Followers",
+                "KOLs Following", "_kols_list",
+            ]].copy()
 
-df: pd.DataFrame = st.session_state.result_df
+            st.dataframe(
+                display,
+                use_container_width=True,
+                column_config={
+                    "_avatar":              st.column_config.ImageColumn("Avatar", width="small"),
+                    "Profile":              st.column_config.TextColumn("Profile", width="medium"),
+                    "Score":                st.column_config.NumberColumn("Score", format="%.1f"),
+                    "Score Change 7d":      st.column_config.NumberColumn("Score Δ 7d", format="%+.2f"),
+                    "Total Followers":      st.column_config.NumberColumn("Total Flw", format="%d"),
+                    "Influencer Followers": st.column_config.NumberColumn("Influencer Flw", format="%d"),
+                    "VC Followers":         st.column_config.NumberColumn("VC Flw", format="%d"),
+                    "KOLs Following":       st.column_config.NumberColumn("KOLs Following", format="%d"),
+                    "_kols_list":           st.column_config.TextColumn("KOLs"),
+                },
+                hide_index=False,
+            )
+            st.caption(f"{len(df)} proiecte detectate · {len(kols)} KOLs monitorizați")
 
-if df.empty:
-    st.info("Niciun proiect detectat. API key-ul poate fi inactiv.")
-    with st.expander("Debug: KOLs încărcați"):
-        st.write(kols)
-    st.stop()
 
-# ── tabel principal ───────────────────────────────────────────────────────────
+# ════════════════════════════════════════════════════════════════
+#  TAB 2 — TOKEN ANALYSIS
+# ════════════════════════════════════════════════════════════════
+with tab_token:
+    st.markdown("#### Caută token după adresă de contract Solana")
+    st.caption("Sursa: DexScreener API · cea mai lichidă pereche DEX")
 
-display = df[[
-    "_avatar", "Profile", "Score", "Score Change 7d",
-    "Total Followers", "Influencer Followers", "VC Followers",
-    "KOLs Following", "_kols_list",
-]].copy()
+    with st.form("token_form"):
+        address = st.text_input(
+            "Adresă contract",
+            placeholder="ex: So11111111111111111111111111111111111111112",
+            label_visibility="collapsed",
+        )
+        submitted = st.form_submit_button("🔎 Search", use_container_width=False)
 
-st.dataframe(
-    display,
-    use_container_width=True,
-    column_config={
-        "_avatar": st.column_config.ImageColumn(
-            "Avatar", width="small",
-        ),
-        "Profile": st.column_config.TextColumn("Profile", width="medium"),
-        "Score": st.column_config.NumberColumn("Score", format="%.1f"),
-        "Score Change 7d": st.column_config.NumberColumn("Score Δ 7d", format="%+.2f"),
-        "Total Followers": st.column_config.NumberColumn("Total Flw", format="%d"),
-        "Influencer Followers": st.column_config.NumberColumn("Influencer Flw", format="%d"),
-        "VC Followers": st.column_config.NumberColumn("VC Flw", format="%d"),
-        "KOLs Following": st.column_config.NumberColumn("KOLs Following", format="%d"),
-        "_kols_list": st.column_config.TextColumn("KOLs"),
-    },
-    hide_index=False,
-)
+    if submitted:
+        if not address.strip():
+            st.warning("Introdu o adresă de contract.")
+        else:
+            with st.spinner("Se interoghează DexScreener…"):
+                pair, err = fetch_token(address)
 
-st.caption(f"{len(df)} proiecte detectate · {len(kols)} KOLs monitorizați")
+            if err:
+                st.error(f"❌ {err}")
+            else:
+                base  = pair.get("baseToken", {})
+                quote = pair.get("quoteToken", {})
+                liq   = pair.get("liquidity", {})
+                txns  = pair.get("txns", {}).get("h24", {})
+                priceUsd = pair.get("priceUsd") or pair.get("price")
+                price_change = pair.get("priceChange", {}).get("h24")
+
+                # header
+                dex_url = pair.get("url", "")
+                st.markdown(f"""
+                <div style="display:flex;align-items:center;gap:1rem;margin-bottom:1rem;">
+                  <div>
+                    <div style="font-size:1.4rem;font-weight:700;color:#e2e8f0">
+                      {base.get('name','—')}
+                      <span style="font-size:0.95rem;color:#64748b;font-weight:400">
+                        &nbsp;{base.get('symbol','')}
+                      </span>
+                    </div>
+                    <div style="font-size:0.75rem;color:#475569;margin-top:2px">
+                      {base.get('address',address)} · par cu {quote.get('symbol','?')}
+                    </div>
+                  </div>
+                </div>
+                """, unsafe_allow_html=True)
+
+                # KPI grid
+                delta_color = "#22c55e" if (price_change or 0) >= 0 else "#ef4444"
+                delta_sign  = "▲" if (price_change or 0) >= 0 else "▼"
+
+                def kpi(label, value, sub=None):
+                    sub_html = f'<div style="font-size:0.72rem;color:#818cf8;margin-top:3px">{sub}</div>' if sub else ""
+                    return f"""
+                    <div style="background:#0f1320;border:1px solid #1e2440;border-radius:10px;
+                                padding:1rem 1.2rem;flex:1;min-width:130px">
+                      <div style="font-size:0.7rem;color:#64748b;letter-spacing:.06em;text-transform:uppercase">{label}</div>
+                      <div style="font-size:1.35rem;font-weight:700;color:#e2e8f0;margin-top:4px">{value}</div>
+                      {sub_html}
+                    </div>"""
+
+                try:
+                    price_fmt = f"${float(priceUsd):.6f}" if priceUsd else "—"
+                except Exception:
+                    price_fmt = "—"
+
+                buys  = txns.get("buys",  "—")
+                sells = txns.get("sells", "—")
+                total_txns = (buys + sells) if isinstance(buys, int) and isinstance(sells, int) else "—"
+
+                st.markdown(f"""
+                <div style="display:flex;gap:0.75rem;flex-wrap:wrap;margin-bottom:1rem">
+                  {kpi("Preț", price_fmt,
+                       f'<span style="color:{delta_color}">{delta_sign} {abs(price_change or 0):.2f}%</span> 24h')}
+                  {kpi("Market Cap",   fmt_num(pair.get("marketCap") or pair.get("fdv")))}
+                  {kpi("Volum 24h",    fmt_num(pair.get("volume", {}).get("h24")))}
+                  {kpi("Lichiditate",  fmt_num(liq.get("usd")))}
+                  {kpi("Tranzacții 24h", f"{total_txns:,}" if isinstance(total_txns, int) else total_txns,
+                       f"↑ {buys:,} cumpărări · ↓ {sells:,} vânzări" if isinstance(buys, int) else None)}
+                </div>
+                """, unsafe_allow_html=True)
+
+                if dex_url:
+                    st.markdown(f"[Vezi pe DexScreener →]({dex_url})")
