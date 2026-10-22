@@ -41,6 +41,19 @@ html, body,
 /* progress */
 [data-testid="stProgressBar"] > div > div { background: #818cf8 !important; }
 
+/* sidebar */
+[data-testid="stSidebar"] {
+    background: #0f1320 !important;
+    border-right: 1px solid #1e2440 !important;
+}
+[data-testid="stSidebar"] h3 { color: #e2e8f0 !important; }
+[data-testid="stSidebar"] [data-testid="stTextInput"] input {
+    background: #161b2e !important;
+    border: 1px solid #2e3561 !important;
+    color: #e2e8f0 !important;
+    border-radius: 6px !important;
+}
+
 /* hide branding */
 #MainMenu, footer { visibility: hidden; }
 </style>
@@ -99,6 +112,18 @@ def load_kols() -> list[str]:
         return df["username"].dropna().tolist() if "username" in df.columns else []
     except FileNotFoundError:
         return []
+
+
+def save_kol(username: str) -> bool:
+    username = username.strip().lstrip("@")
+    if not username:
+        return False
+    kols = load_kols()
+    if username.lower() in [k.lower() for k in kols]:
+        return False
+    kols.append(username)
+    pd.DataFrame({"username": kols}).to_csv(CSV_PATH, index=False)
+    return True
 
 
 def _pick(d: dict, *keys):
@@ -164,6 +189,45 @@ def run_analysis(kols: list[str]) -> pd.DataFrame:
     df.index += 1
     df.index.name = "#"
     return df
+
+
+# ── sidebar ───────────────────────────────────────────────────────────────────
+
+with st.sidebar:
+    st.markdown("### 👥 KOL List")
+    st.divider()
+
+    kols_sidebar = load_kols()
+    if kols_sidebar:
+        for i, kol in enumerate(kols_sidebar, 1):
+            st.markdown(
+                f'<div style="padding:4px 0;color:#e2e8f0;font-size:0.88rem">'
+                f'<span style="color:#475569;margin-right:8px">{i}.</span>@{kol}</div>',
+                unsafe_allow_html=True,
+            )
+    else:
+        st.caption("Niciun KOL adăugat încă.")
+
+    st.divider()
+    st.markdown('<p style="font-size:0.78rem;color:#64748b;margin-bottom:6px">Adaugă KOL</p>',
+                unsafe_allow_html=True)
+
+    with st.form("add_kol_form", clear_on_submit=True):
+        new_kol = st.text_input(
+            "Username",
+            placeholder="ex: ansem",
+            label_visibility="collapsed",
+        )
+        submitted = st.form_submit_button("＋ Adaugă KOL", use_container_width=True)
+
+    if submitted:
+        if save_kol(new_kol):
+            st.success(f"@{new_kol.strip().lstrip('@')} adăugat!")
+            st.rerun()
+        elif new_kol.strip():
+            st.warning("Username deja în listă.")
+        else:
+            st.warning("Introdu un username.")
 
 
 # ── layout ────────────────────────────────────────────────────────────────────
