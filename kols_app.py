@@ -274,24 +274,24 @@ with tab_trending:
                 st.write(kols)
         else:
             display = df[[
-                "_avatar", "Profile", "Score", "Score Change 7d",
+                "_avatar", "Profile", "Score",
                 "Total Followers", "Influencer Followers", "VC Followers",
                 "KOLs Following", "_kols_list",
             ]].copy()
+            display = display.rename(columns={"_kols_list": "Urmărit de"})
 
             st.dataframe(
                 display,
                 use_container_width=True,
                 column_config={
-                    "_avatar":              st.column_config.ImageColumn("Avatar", width="small"),
+                    "_avatar":              st.column_config.ImageColumn("", width="small"),
                     "Profile":              st.column_config.TextColumn("Profile", width="medium"),
                     "Score":                st.column_config.NumberColumn("Score", format="%.1f"),
-                    "Score Change 7d":      st.column_config.NumberColumn("Score Δ 7d", format="%+.2f"),
                     "Total Followers":      st.column_config.NumberColumn("Total Flw", format="%d"),
                     "Influencer Followers": st.column_config.NumberColumn("Influencer Flw", format="%d"),
                     "VC Followers":         st.column_config.NumberColumn("VC Flw", format="%d"),
                     "KOLs Following":       st.column_config.NumberColumn("KOLs Following", format="%d"),
-                    "_kols_list":           st.column_config.TextColumn("KOLs"),
+                    "Urmărit de":           st.column_config.TextColumn("Urmărit de KOLs"),
                 },
                 hide_index=False,
             )
