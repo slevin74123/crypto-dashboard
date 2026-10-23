@@ -140,7 +140,9 @@ def run_analysis(kols: list[str]) -> pd.DataFrame:
     prog = st.progress(0, text="Pasul 1/2 — new-following-7d…")
     for i, kol in enumerate(kols):
         prog.progress((i + 1) / len(kols), text=f"[1/2] @{kol}")
-        following = sg("new-following-7d", kol)
+        resp = sg("new-following-7d", kol)
+        # API returns {"users": [...]} with full user objects
+        following = resp.get("users", resp) if isinstance(resp, dict) else resp
         if isinstance(following, list):
             for item in following:
                 proj = item if isinstance(item, str) else (
@@ -158,28 +160,32 @@ def run_analysis(kols: list[str]) -> pd.DataFrame:
     for i, proj in enumerate(projects):
         prog2.progress((i + 1) / len(projects), text=f"[2/2] @{proj}")
 
-        info    = sg("info", proj)
+        info_d  = sg("info", proj)
         score_d = sg("score", proj)
         chg_d   = sg("score-changes", proj)
         stat_d  = sg("followers-stats", proj)
 
-        info = info.get("data", info) if isinstance(info, dict) else {}
-        score_d = score_d.get("data", score_d) if isinstance(score_d, dict) else {}
-        chg_d   = chg_d.get("data",   chg_d)   if isinstance(chg_d,   dict) else {}
-        stat_d  = stat_d.get("data",  stat_d)  if isinstance(stat_d,  dict) else {}
+        # /info → flat dict
+        info_d = info_d if isinstance(info_d, dict) else {}
+        # /score → {"score": 825.21}
+        score_d = score_d if isinstance(score_d, dict) else {}
+        # /score-changes → {"score_change_7d": ...} (fallback keys)
+        chg_d = chg_d if isinstance(chg_d, dict) else {}
+        # /followers-stats → {"followers_count":..., "influencers_count":..., "venture_capitals_count":...}
+        stat_d = stat_d if isinstance(stat_d, dict) else {}
 
-        avatar = _pick(info, "profile_image_url", "avatar", "image_url") or ""
-        name   = _pick(info, "name", "displayName", "display_name") or proj
+        avatar = _pick(info_d, "profile_image_url", "avatar", "image_url") or ""
+        name   = _pick(info_d, "display_name", "name", "username") or proj
 
         rows.append({
             "_avatar":              avatar,
             "Profile":              name,
             "username":             proj,
-            "Score":                _pick(score_d, "score", "value"),
-            "Score Change 7d":      _pick(chg_d,   "change_7d", "7d", "weekly"),
-            "Total Followers":      _pick(stat_d,   "total_followers",     "totalFollowers",     "total"),
-            "Influencer Followers": _pick(stat_d,   "influencer_followers","influencerFollowers","influencers"),
-            "VC Followers":         _pick(stat_d,   "vc_followers",        "vcFollowers",        "vcs"),
+            "Score":                _pick(score_d, "score", "value", "data"),
+            "Score Change 7d":      _pick(chg_d,   "score_change_7d", "change_7d", "7d", "weekly"),
+            "Total Followers":      _pick(stat_d,   "followers_count",  "total_followers",     "total"),
+            "Influencer Followers": _pick(stat_d,   "influencers_count","influencer_followers","influencers"),
+            "VC Followers":         _pick(stat_d,   "venture_capitals_count","vc_followers",   "vcs"),
             "KOLs Following":       len(project_kols[proj]),
             "_kols_list":           ", ".join(project_kols[proj]),
         })
