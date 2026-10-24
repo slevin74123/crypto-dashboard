@@ -1,0 +1,51 @@
+TRAINING_EXAMPLES = {
+    "swordcat": {
+        "token": "5tCju6YNxHq5zrA6tGndr6F7TK42mpUFmeE31cSFpump",
+        "chain": "solana",
+        "age_days": 26,
+        "mc_current": 2190000,
+        "mc_ath": 4910000,
+        "pct_from_ath": -55.4,
+        "bs_ratio": 2.16,
+        "support_bots": 132,
+        "dump_bots": 75,
+        "patterns": ["bundler_graduation", "real_time_floor_hold"],
+        "dump_events": 9,
+        "avg_recovery_s": 0.75,
+        "outcome": "positive",
+        "notes": "Classic bundler grad at launch + sustained floor hold at $2.19M"
+    },
+    "dacitycoin": {
+        "token": "DKYcjobF7HPtL9RyQBRdeRQ2iWvizpfbgWwPWNXdpump",
+        "chain": "solana",
+        "age_days": 9,
+        "mc_current": 1600000,
+        "mc_ath": 5080000,
+        "pct_from_ath": -68.5,
+        "bs_ratio": 2.16,
+        "support_bots": 127,
+        "dump_bots": 74,
+        "patterns": ["bundler_graduation", "real_time_floor_hold"],
+        "dump_events": 9,
+        "avg_recovery_s": 0.9,
+        "outcome": "positive",
+        "notes": "Double bundler graduation confirmed, U-shape recovery at $1.6M"
+    },
+    "hooked": {
+        "token": "C1mBfBoDkwWfd6uTFZp62ARHLjeVp3bDpCDMfMZtPngE",
+        "chain": "solana",
+        "age_days": 25,
+        "mc_current": 1400000,
+        "mc_ath": 16550000,
+        "pct_from_ath": -91.5,
+        "bs_ratio": 1.93,
+        "support_bots": 9,
+        "dump_bots": 5,
+        "patterns": ["real_time_floor_hold"],
+        "dump_events": 3,
+        "avg_recovery_s": 0.086,
+        "flags": ["dev_sold", "tax_3pct"],
+        "outcome": "positive",
+        "notes": "Deep value recovery signal, 91.5% from ATH, sub-0.3s recovery, dev sold 25d ago so sell pressure cleared"
+    }
+}
