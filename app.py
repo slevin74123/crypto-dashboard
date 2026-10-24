@@ -55,6 +55,41 @@ def price_card(label: str, price: float, change: float) -> None:
     )
 
 
+# ── Sidebar ──────────────────────────────────────────────────────────────────
+
+_SIGNALS = [
+    {"name": "SWORDCAT",  "mc": "$2.19M", "pattern": "floor_hold", "bs": "2.16", "live": False},
+    {"name": "DACITYCOIN","mc": "$1.60M", "pattern": "floor_hold", "bs": "2.16", "live": False},
+    {"name": "HOOKED",    "mc": "$1.40M", "pattern": "live signal","bs": "1.93", "live": True},
+]
+
+with st.sidebar:
+    st.markdown("### 🛡️ Floor Signals")
+    st.divider()
+
+    for sig in _SIGNALS:
+        badge_bg  = "#14532d" if not sig["live"] else "#3d2c00"
+        badge_col = "#4ade80" if not sig["live"] else "#fbbf24"
+        icon      = "✅" if not sig["live"] else "⚡"
+        st.html(f"""
+        <div style="background:#1a1f2e;border:1px solid #1e2440;border-radius:8px;
+                    padding:10px 12px;margin-bottom:8px">
+          <div style="font-size:0.82rem;font-weight:700;color:#e2e8f0;margin-bottom:3px">
+            {sig['name']}
+          </div>
+          <div style="font-size:0.88rem;color:#ffffff;margin-bottom:5px">{sig['mc']}</div>
+          <div style="display:flex;align-items:center;justify-content:space-between">
+            <span style="background:{badge_bg};color:{badge_col};font-size:0.68rem;
+                         padding:2px 7px;border-radius:4px">{icon} {sig['pattern']}</span>
+            <span style="font-size:0.72rem;color:#64748b">B/S {sig['bs']}</span>
+          </div>
+        </div>
+        """)
+
+    st.divider()
+    st.caption("Upload GMGN JSON in tab → GMGN Analyzer")
+
+
 # ── Layout ──────────────────────────────────────────────────────────────────
 
 st.title("📈 Crypto Analytics Dashboard")
