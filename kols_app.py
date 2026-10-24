@@ -4,6 +4,7 @@ import requests
 import os
 from datetime import datetime
 from dotenv import load_dotenv
+from tabs.gmgn_analyzer import render as render_gmgn
 
 load_dotenv()
 API_KEY = os.getenv("SORSA_API_KEY", "")
@@ -239,7 +240,7 @@ with st.sidebar:
 # ── layout ────────────────────────────────────────────────────────────────────
 
 st.markdown("## 📡 KOL Dashboard")
-tab_trending, tab_token = st.tabs(["📈  Trending", "🔎  Token Analysis"])
+tab_trending, tab_token, tab_gmgn = st.tabs(["📈  Trending", "🔎  Token Analysis", "📂  GMGN Analyzer"])
 
 
 # ════════════════════════════════════════════════════════════════
@@ -385,3 +386,10 @@ with tab_token:
 
                 if dex_url:
                     st.markdown(f"[Vezi pe DexScreener →]({dex_url})")
+
+
+# ════════════════════════════════════════════════════════════════
+#  TAB 3 — GMGN ANALYZER
+# ════════════════════════════════════════════════════════════════
+with tab_gmgn:
+    render_gmgn()
