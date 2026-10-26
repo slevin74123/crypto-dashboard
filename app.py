@@ -95,70 +95,81 @@ with st.sidebar:
 st.title("📈 Crypto Analytics Dashboard")
 st.caption(f"Date actualizate la fiecare 5 minute · {datetime.utcnow().strftime('%Y-%m-%d %H:%M')} UTC")
 
-coin_ids = list(COINS.values())
-coin_labels = list(COINS.keys())
+tab_prices, tab_trending, tab_kol = st.tabs(["💰 Prices", "🔥 Trending", "👑 KOL Intel"])
 
-with st.spinner("Se încarcă prețurile..."):
-    try:
-        prices = get_prices(coin_ids)
-    except Exception as e:
-        st.error(f"Eroare la preluarea prețurilor: {e}")
-        st.stop()
+# ── TAB: PRICES ───────────────────────────────────────────────────────────────
+with tab_prices:
+    coin_ids = list(COINS.values())
+    coin_labels = list(COINS.keys())
 
-# ── KPI row ──────────────────────────────────────────────────────────────────
-cols = st.columns(len(COINS))
-for col, (label, cid) in zip(cols, COINS.items()):
-    with col:
-        data = prices.get(cid, {})
-        price_card(label, data.get("usd", 0), data.get("usd_24h_change", 0))
+    with st.spinner("Se încarcă prețurile..."):
+        try:
+            prices = get_prices(coin_ids)
+        except Exception as e:
+            st.error(f"Eroare la preluarea prețurilor: {e}")
+            prices = {}
 
-st.divider()
+    cols = st.columns(len(COINS))
+    for col, (label, cid) in zip(cols, COINS.items()):
+        with col:
+            data = prices.get(cid, {})
+            price_card(label, data.get("usd", 0), data.get("usd_24h_change", 0))
 
-# ── Chart ────────────────────────────────────────────────────────────────────
-col1, col2 = st.columns([2, 1])
+    st.divider()
 
-with col1:
-    selected_label = st.selectbox("Monedă", coin_labels)
-    selected_tf = st.select_slider("Perioadă", options=list(TIMEFRAMES.keys()))
+    col1, col2 = st.columns([2, 1])
 
-selected_id = COINS[selected_label]
-days = TIMEFRAMES[selected_tf]
+    with col1:
+        selected_label = st.selectbox("Monedă", coin_labels)
+        selected_tf = st.select_slider("Perioadă", options=list(TIMEFRAMES.keys()))
 
-with st.spinner("Se încarcă istoricul..."):
-    try:
-        hist = get_history(selected_id, days)
-    except Exception as e:
-        st.error(f"Eroare la preluarea istoricului: {e}")
-        st.stop()
+    selected_id = COINS[selected_label]
+    days = TIMEFRAMES[selected_tf]
 
-fig = go.Figure()
-fig.add_trace(
-    go.Scatter(
-        x=hist["date"],
-        y=hist["price"],
-        mode="lines",
-        name=selected_label,
-        line=dict(color="#f7931a", width=2),
-        fill="tozeroy",
-        fillcolor="rgba(247,147,26,0.1)",
+    with st.spinner("Se încarcă istoricul..."):
+        try:
+            hist = get_history(selected_id, days)
+        except Exception as e:
+            st.error(f"Eroare la preluarea istoricului: {e}")
+            hist = __import__('pandas').DataFrame(columns=["date", "price"])
+
+    fig = go.Figure()
+    fig.add_trace(
+        go.Scatter(
+            x=hist["date"],
+            y=hist["price"],
+            mode="lines",
+            name=selected_label,
+            line=dict(color="#f7931a", width=2),
+            fill="tozeroy",
+            fillcolor="rgba(247,147,26,0.1)",
+        )
     )
-)
-fig.update_layout(
-    title=f"{selected_label} — {selected_tf}",
-    xaxis_title="",
-    yaxis_title="Preț (USD)",
-    template="plotly_dark",
-    height=420,
-    margin=dict(l=0, r=0, t=40, b=0),
-)
-st.plotly_chart(fig, use_container_width=True)
+    fig.update_layout(
+        title=f"{selected_label} — {selected_tf}",
+        xaxis_title="",
+        yaxis_title="Preț (USD)",
+        template="plotly_dark",
+        height=420,
+        margin=dict(l=0, r=0, t=40, b=0),
+    )
+    st.plotly_chart(fig, use_container_width=True)
 
-# ── Stats ────────────────────────────────────────────────────────────────────
-with col2:
-    st.subheader("Statistici perioadă")
-    if not hist.empty:
-        st.metric("Maxim", f"${hist['price'].max():,.2f}")
-        st.metric("Minim", f"${hist['price'].min():,.2f}")
-        pct = (hist["price"].iloc[-1] - hist["price"].iloc[0]) / hist["price"].iloc[0] * 100
-        st.metric("Variație", f"{pct:+.2f}%")
-        st.metric("Volatilitate (std)", f"${hist['price'].std():,.2f}")
+    with col2:
+        st.subheader("Statistici perioadă")
+        if not hist.empty:
+            st.metric("Maxim", f"${hist['price'].max():,.2f}")
+            st.metric("Minim", f"${hist['price'].min():,.2f}")
+            pct = (hist["price"].iloc[-1] - hist["price"].iloc[0]) / hist["price"].iloc[0] * 100
+            st.metric("Variație", f"{pct:+.2f}%")
+            st.metric("Volatilitate (std)", f"${hist['price'].std():,.2f}")
+
+# ── TAB: TRENDING ─────────────────────────────────────────────────────────────
+with tab_trending:
+    from tabs.trending import render as render_trending
+    render_trending()
+
+# ── TAB: KOL INTEL ────────────────────────────────────────────────────────────
+with tab_kol:
+    from tabs.kol_intel import render as render_kol_intel
+    render_kol_intel()

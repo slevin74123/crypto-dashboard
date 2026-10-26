@@ -19,7 +19,7 @@ def render():
         r = requests.get(
             "https://public-api.birdeye.so/defi/token_trending",
             headers={"X-API-KEY": key, "x-chain": "solana"},
-            params={"sort_by": "v24hUSD", "sort_type": "desc", "limit": 20},
+            params={"sort_type": "desc", "limit": 20},
             timeout=10
         )
         return r.json().get("data", {}).get("tokens", [])
