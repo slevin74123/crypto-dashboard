@@ -5,6 +5,7 @@ import os
 from datetime import datetime
 from dotenv import load_dotenv
 from tabs.gmgn_analyzer import render as render_gmgn
+from tabs.trending import render as render_birdeye
 
 load_dotenv()
 API_KEY = os.getenv("SORSA_API_KEY", "")
@@ -236,11 +237,27 @@ with st.sidebar:
         else:
             st.warning("Introdu un username.")
 
+    st.divider()
+    st.markdown('<p style="font-size:0.78rem;color:#64748b;margin-bottom:6px">Birdeye API Key</p>',
+                unsafe_allow_html=True)
+    birdeye_key = st.text_input(
+        "Birdeye API Key",
+        value=st.session_state.get("birdeye_api_key", ""),
+        placeholder="a91bde8f...",
+        type="password",
+        label_visibility="collapsed",
+        key="birdeye_key_input",
+    )
+    if birdeye_key:
+        st.session_state["birdeye_api_key"] = birdeye_key
+
 
 # ── layout ────────────────────────────────────────────────────────────────────
 
 st.markdown("## 📡 KOL Dashboard")
-tab_trending, tab_token, tab_gmgn = st.tabs(["📈  Trending", "🔎  Token Analysis", "📂  GMGN Analyzer"])
+tab_trending, tab_birdeye, tab_token, tab_gmgn = st.tabs([
+    "📈  KOL Trending", "🔥  Birdeye", "🔎  Token Analysis", "📂  GMGN Analyzer"
+])
 
 
 # ════════════════════════════════════════════════════════════════
@@ -300,7 +317,14 @@ with tab_trending:
 
 
 # ════════════════════════════════════════════════════════════════
-#  TAB 2 — TOKEN ANALYSIS
+#  TAB 2 — BIRDEYE TRENDING
+# ════════════════════════════════════════════════════════════════
+with tab_birdeye:
+    render_birdeye()
+
+
+# ════════════════════════════════════════════════════════════════
+#  TAB 3 — TOKEN ANALYSIS
 # ════════════════════════════════════════════════════════════════
 with tab_token:
     st.markdown("#### Caută token după adresă de contract Solana")
