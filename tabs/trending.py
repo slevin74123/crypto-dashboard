@@ -13,7 +13,6 @@ def _fetch_trending(api_key: str) -> list[dict]:
                 "x-chain": "solana",
             },
             params={
-                "sort_by": "v24hUSD",
                 "sort_type": "desc",
                 "limit": 20,
             },
@@ -21,7 +20,7 @@ def _fetch_trending(api_key: str) -> list[dict]:
         )
         r.raise_for_status()
         data = r.json()
-        return data.get("data", {}).get("tokens", data.get("tokens", []))
+        return data.get("data", {}).get("tokens", [])
     except requests.HTTPError as e:
         st.error(f"Birdeye API error: {e.response.status_code} — {e.response.text[:200]}")
         return []
@@ -61,9 +60,9 @@ def _fmt_volume(val) -> str:
 
 def _token_card(token: dict) -> str:
     symbol   = token.get("symbol") or token.get("name") or "—"
-    price    = _fmt_price(token.get("price") or token.get("v24hUSD"))
-    change   = token.get("priceChange24hPercent") or token.get("change24h") or 0
-    volume   = _fmt_volume(token.get("v24hUSD") or token.get("volume24h"))
+    price    = _fmt_price(token.get("price"))
+    change   = token.get("price24hChangePercent") or 0
+    volume   = _fmt_volume(token.get("volume24hUSD"))
     logo     = token.get("logoURI") or token.get("logo") or ""
 
     try:
