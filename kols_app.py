@@ -6,6 +6,7 @@ from datetime import datetime
 from dotenv import load_dotenv
 from tabs.gmgn_analyzer import render as render_gmgn
 from tabs.trending import render as render_birdeye
+from tabs.token_analysis import render as render_token_analysis
 
 load_dotenv()
 API_KEY = os.getenv("SORSA_API_KEY", "")
@@ -327,89 +328,7 @@ with tab_birdeye:
 #  TAB 3 — TOKEN ANALYSIS
 # ════════════════════════════════════════════════════════════════
 with tab_token:
-    st.markdown("#### Caută token după adresă de contract Solana")
-    st.caption("Sursa: DexScreener API · cea mai lichidă pereche DEX")
-
-    with st.form("token_form"):
-        address = st.text_input(
-            "Adresă contract",
-            placeholder="ex: So11111111111111111111111111111111111111112",
-            label_visibility="collapsed",
-        )
-        submitted = st.form_submit_button("🔎 Search", use_container_width=False)
-
-    if submitted:
-        if not address.strip():
-            st.warning("Introdu o adresă de contract.")
-        else:
-            with st.spinner("Se interoghează DexScreener…"):
-                pair, err = fetch_token(address)
-
-            if err:
-                st.error(f"❌ {err}")
-            else:
-                base  = pair.get("baseToken", {})
-                quote = pair.get("quoteToken", {})
-                liq   = pair.get("liquidity", {})
-                txns  = pair.get("txns", {}).get("h24", {})
-                priceUsd = pair.get("priceUsd") or pair.get("price")
-                price_change = pair.get("priceChange", {}).get("h24")
-
-                # header
-                dex_url = pair.get("url", "")
-                st.html(f"""
-                <div style="display:flex;align-items:center;gap:1rem;margin-bottom:1rem;">
-                  <div>
-                    <div style="font-size:1.4rem;font-weight:700;color:#e2e8f0">
-                      {base.get('name','—')}
-                      <span style="font-size:0.95rem;color:#64748b;font-weight:400">
-                        &nbsp;{base.get('symbol','')}
-                      </span>
-                    </div>
-                    <div style="font-size:0.75rem;color:#475569;margin-top:2px">
-                      {base.get('address',address)} · par cu {quote.get('symbol','?')}
-                    </div>
-                  </div>
-                </div>
-                """)
-
-                # KPI grid
-                delta_color = "#22c55e" if (price_change or 0) >= 0 else "#ef4444"
-                delta_sign  = "▲" if (price_change or 0) >= 0 else "▼"
-
-                def kpi(label, value, sub=None):
-                    sub_html = f'<div style="font-size:0.72rem;color:#818cf8;margin-top:3px">{sub}</div>' if sub else ""
-                    return f"""
-                    <div style="background:#0f1320;border:1px solid #1e2440;border-radius:10px;
-                                padding:1rem 1.2rem;flex:1;min-width:130px">
-                      <div style="font-size:0.7rem;color:#64748b;letter-spacing:.06em;text-transform:uppercase">{label}</div>
-                      <div style="font-size:1.35rem;font-weight:700;color:#e2e8f0;margin-top:4px">{value}</div>
-                      {sub_html}
-                    </div>"""
-
-                try:
-                    price_fmt = f"${float(priceUsd):.6f}" if priceUsd else "—"
-                except Exception:
-                    price_fmt = "—"
-
-                buys  = txns.get("buys",  "—")
-                sells = txns.get("sells", "—")
-                total_txns = (buys + sells) if isinstance(buys, int) and isinstance(sells, int) else "—"
-
-                st.html(f"""
-                <div style="display:flex;gap:0.75rem;flex-wrap:wrap;margin-bottom:1rem">
-                  {kpi("Preț", price_fmt,
-                       f'<span style="color:{delta_color}">{delta_sign} {abs(price_change or 0):.2f}%</span> 24h')}
-                  {kpi("Market Cap",   fmt_num(pair.get("marketCap") or pair.get("fdv")))}
-                  {kpi("Volum 24h",    fmt_num(pair.get("volume", {}).get("h24")))}
-                  {kpi("Lichiditate",  fmt_num(liq.get("usd")))}
-                  {kpi("Tranzacții 24h", f"{total_txns:,}" if isinstance(total_txns, int) else total_txns,
-                       f"↑ {buys:,} cumpărări · ↓ {sells:,} vânzări" if isinstance(buys, int) else None)}
-                </div>
-                """)
-
-                if dex_url:
-                    st.markdown(f"[Vezi pe DexScreener →]({dex_url})")
+    render_token_analysis()
 
 
 # ════════════════════════════════════════════════════════════════
