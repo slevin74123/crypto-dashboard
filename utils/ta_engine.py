@@ -33,3 +33,34 @@ def detect_trend_bias(candles: list) -> str:
     if bear > bull * 1.5:
         return "bearish"
     return "ranging"
+
+
+def detect_bullish_ob(candles: list, move_threshold=0.03) -> list:
+    obs = []
+    for i in range(len(candles) - 2):
+        if candles[i]["close"] < candles[i]["open"]:
+            if candles[i+1]["open"] > 0:
+                move = (candles[i+2]["high"] - candles[i+1]["open"]) / candles[i+1]["open"]
+                if move >= move_threshold:
+                    obs.append({
+                        "zone": [candles[i]["low"], candles[i]["high"]],
+                        "type": "bullish_ob",
+                        "valid": True,
+                        "time": candles[i]["unixTime"]
+                    })
+    return obs[-5:]
+
+
+def detect_fvg(candles: list) -> list:
+    fvgs = []
+    for i in range(1, len(candles) - 1):
+        gap_low = candles[i-1]["high"]
+        gap_high = candles[i+1]["low"]
+        if gap_high > gap_low:
+            fvgs.append({
+                "zone": [gap_low, gap_high],
+                "type": "bullish_fvg",
+                "filled": False,
+                "time": candles[i]["unixTime"]
+            })
+    return fvgs[-5:]
