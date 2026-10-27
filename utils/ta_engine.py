@@ -64,3 +64,27 @@ def detect_fvg(candles: list) -> list:
                 "time": candles[i]["unixTime"]
             })
     return fvgs[-5:]
+
+
+def detect_liquidity_levels(candles: list, tolerance=0.005) -> dict:
+    highs = [c["high"] for c in candles]
+    lows = [c["low"] for c in candles]
+    def cluster(prices):
+        levels = []
+        for i in range(len(prices)):
+            for j in range(i+1, len(prices)):
+                if prices[i] > 0 and abs(prices[i] - prices[j]) / prices[i] <= tolerance:
+                    levels.append(round(max(prices[i], prices[j]), 8))
+        return list(set(levels))[:5]
+    return {"equal_highs": cluster(highs), "equal_lows": cluster(lows)}
+
+
+def run_ta(candles_1h: list, candles_1d: list) -> dict:
+    return {
+        "trend_bias": detect_trend_bias(candles_1d),
+        "bullish_obs": detect_bullish_ob(candles_1h),
+        "fvgs": detect_fvg(candles_1h),
+        "liquidity": detect_liquidity_levels(candles_1h),
+        "rsi": calculate_rsi(candles_1h),
+        "candles_count": len(candles_1h)
+    }
